@@ -12,6 +12,12 @@ Goal is to support the following:
 roughly inspired by https://github.com/henjo/libpsf
 see `example.py`
 
+Main dependencies:
+
+- https://github.com/pyparsing/pyparsing for ASCII format parsing
+- https://github.com/Blosc/python-blosc for reading the compressed data chunks in PSF-XL
+- numpy for arrays
+
 The following have been tested:
 
 - tran.tran.tran from Spectre and AFS (not PSF-XL!)
