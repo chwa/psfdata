@@ -5,6 +5,8 @@ from io import BufferedReader
 import blosc
 import numpy as np
 
+from pypsf.util import hexprint
+
 """
 PSF-XL compressed binary format
 ===============================
@@ -84,8 +86,9 @@ class FakeBufferedReader:
         return d
 
 
-def read_xl_chunk(f: BufferedReader, offset: int):
+def read_xl_chunk(f: FakeBufferedReader, offset: int):
     f.seek(offset + 1)
+    hexprint(f._data[f._pos:])
     desc_str = ""
     while (c := f.read(1)) != b'\0':
         desc_str += c.decode()

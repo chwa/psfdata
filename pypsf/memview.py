@@ -1,16 +1,8 @@
 import string
 import struct
-from itertools import islice
 from typing import Self
 
-
-def batched(iterable, n):
-    """Like itertools.batched in Python 3.12"""
-    if n < 1:
-        raise ValueError('n must be at least one')
-    it = iter(iterable)
-    while batch := tuple(islice(it, n)):
-        yield batch
+from pypsf.util import batched
 
 
 class MemoryViewAbs:

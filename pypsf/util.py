@@ -1,10 +1,18 @@
+from itertools import islice
 import string
 from pathlib import Path
 
 import blosc
 import numpy as np
 
-from pypsf.memview import batched
+
+def batched(iterable, n):
+    """Like itertools.batched in Python 3.12"""
+    if n < 1:
+        raise ValueError('n must be at least one')
+    it = iter(iterable)
+    while batch := tuple(islice(it, n)):
+        yield batch
 
 
 def hexprint(data: bytearray, maxlines=5) -> None:

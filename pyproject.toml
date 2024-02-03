@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=61.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,10 +7,17 @@ name = "pypsf"
 version = "0.0.1"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["numpy"]
+dependencies = [
+    "numpy",
+    "pyparsing",
+    "blosc"
+]
 
 [project.optional-dependencies]
 dev = ["pytest", "mypy"]
 
-[tool.setuptools.packages.find]
-namespaces = false
+[project.scripts]
+psfinfo = "pypsf.tools.psfinfo:main"
+
+[tool.setuptools]
+packages = ["pypsf"]

@@ -1,7 +1,11 @@
 from dataclasses import dataclass, field
 
 import numpy as np
-from matplotlib import pyplot as plt
+
+try:
+    from matplotlib import pyplot as plt
+except:
+    plt = None
 
 
 @dataclass
@@ -21,4 +25,6 @@ class Waveform:
         return f"Waveform: {len(self.t)} points, t = {self.t[0]} -> {self.t[-1]} {self.t_unit}"
 
     def plot(self):
+        if plt is None:
+            raise ModuleNotFoundError("Matplotlib is not installed")
         plt.plot(self.t, self.y, label=self.name)

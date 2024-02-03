@@ -26,6 +26,7 @@ class PsfBinFile:
         logger.info(f"Loading PSF file: {path}")
         self._header: dict[str, Any] = {}
         self.is_sweep: bool = False
+        self._value_section = None
 
         self._path = path
 
@@ -88,7 +89,7 @@ class PsfBinFile:
             if isinstance(self._value_section, SimpleValueSection):
                 return [t.name for t in self._value_section.traces.values()]
             else:
-                return list(self._trace_values.keys())
+                return list(self._trace_section.traces_by_name.keys())
 
     def signal_info(self, name: str) -> dict[str, Any] | DataType:
         if self.is_sweep:
@@ -115,6 +116,7 @@ class PsfBinFile:
             with open(fn, 'rb') as f:
                 rdr = FakeBufferedReader(f)
             psfxl_idx = self._trace_section.traces_by_name[name].properties['psfxl_idx']
+            print(psfxl_idx)
             wfm = read_xl_signal(rdr, psfxl_idx[1])
             wfm.name = name
             return wfm

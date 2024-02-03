@@ -13,7 +13,9 @@ class PsfDir:
     def __init__(self, path: Path) -> None:
         self._path = path.absolute()
         logfile = self._path / "logFile"
-        logger.info(f"Reading {logfile = }")
+        if not logfile.is_file():
+            raise FileNotFoundError(f"{logfile}")
+        logger.info(f"Reading {logfile}")
         self.header, self._result = read_asciipsf(logfile)
 
         logger.info("HEADER:")
