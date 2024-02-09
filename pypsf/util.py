@@ -11,7 +11,7 @@ def batched(iterable, n):
         yield batch
 
 
-def hexprint(data: bytearray, maxlines=5) -> None:
+def hexprint(data: bytearray | memoryview, maxlines=5) -> None:
     print("-".join(f"{b:02x}" for b in range(16)))
 
     def prnt(code):
