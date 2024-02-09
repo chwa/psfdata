@@ -11,17 +11,19 @@ Data is returned as dict/list and waveforms in a lightweight `Waveform` dataclas
 <pypsf.psfbin.PsfBinFile object at 0x7fe371bcc110>
 
 >>> psf.header
-{'PSFversion': '1.1', ..., 'errpreset': 'conservative', 'method': 'gear2only', 'lteratio': 10.0, 'relref': 'alllocal', 'cmin': 0.0, 'gmin': 1e-12, 'rabsshort': 0.0}
+{'PSFversion': '1.1', ..., 'errpreset': 'conservative', 'method': 'gear2only',
+'relref': 'alllocal', 'cmin': 0.0, 'gmin': 1e-12, 'rabsshort': 0.0}
 
 >>> psf.names
-['n\\<4\\>', 'n\\<0\\>', 'vdda', 'n\\<3\\>', 'n\\<2\\>', 'n\\<1\\>', 'M0_G', 'V0:p', 'V1:p']
+['n\\<0\\>', 'vdda', 'n\\<3\\>', 'n\\<2\\>', 'n\\<1\\>', 'M0_G', 'V0:p', 'V1:p']
 
 >>> psf.sweep_info
 {'sweep_direction': 0, 'units': 's', 'plot': 0, 'grid': 1, 'name': 'time'}
 
 >>> psf.get_signal("M0_G")
 Waveform(t=array([0.00000000e+00, 2.62865500e-14, 3.86983269e-14, ...,
-       9.99771753e-10, 9.99885876e-10, 1.00000000e-09]), t_unit='s', y=array([0.5, 0.5, 0.5, ..., 0.5, 0.5, 0.5]), y_unit='V', name='M0_G')
+9.99771753e-10, 9.99885876e-10, 1.00000000e-09]), t_unit='s',
+y=array([0.5, 0.5, 0.5, ..., 0.5, 0.5, 0.5]), y_unit='V', name='M0_G')
 
 ```
 
