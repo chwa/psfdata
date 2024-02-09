@@ -34,23 +34,12 @@ A `psfinfo` command-line utility is provided to list the contents of a PSF direc
 
 ## Details
 
-roughly inspired by https://github.com/henjo/libpsf
-
-
 Main dependencies:
 
 - https://github.com/pyparsing/pyparsing for ASCII format parsing
 - https://github.com/Blosc/python-blosc for reading the compressed data chunks in PSF-XL
 - numpy for arrays
 
-The following have been tested:
-
-- tran.tran.tran from Spectre and AFS (not PSF-XL!)
-- ac.ac AC simulation
-- element.info
-- dc.dc with and without sweep
-- dcOp.dc
-- dcOpInfo.dc
 
 ## Next steps
 
