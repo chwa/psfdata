@@ -12,7 +12,11 @@ class PsfFile(ABC):
     """Base class for ASCII and binary PSF files (and other file formats?)"""
 
     @staticmethod
-    def load(path: Path) -> PsfFile:
+    def load(path: Path | str) -> PsfFile:
+        """
+        Load a PSF (binary/ASCII) file from the given file path.
+        """
+        path = Path(path)
         with open(path, 'rb') as f:
             header_bytes = f.read(6)
 

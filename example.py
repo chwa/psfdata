@@ -24,6 +24,11 @@ def main() -> None:
     fn = Path("private_examples/psfxl_tran_1signal/tran.tran.tran")
     fn = Path("private_examples/psfxl_large/tran.tran.tran")
     # fn = Path("private_examples/dcswp.dc")
+    psf = PsfFile.load("private_examples/psf_dcsweep_tran/tran.tran.tran")
+
+    print(f"{psf=}")
+
+    exit()
 
     psf_dir = PsfDir(fn.parent)
     psf = psf_dir.get_analysis("subckts-info.subckts")

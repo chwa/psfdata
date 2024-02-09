@@ -1,16 +1,39 @@
-# Read PSF (binary) results in Python
+# Read PSF simulation results in Python
 
-Goal is to support the following:
+Loads PSF-ASCII and PSF-bin files (including experimental support for PSF-XL).
 
-- List full contents of psf simulation directory, based on `logFile`
-- Expose all signals from PSF-ASCII, PSF binary, and PSF-XL files
-  through suitable types/classes such as dict and numpy.ndarray
+Data is returned as dict/list and waveforms in a lightweight `Waveform` dataclass containing the x and y components as `numpy.ndarray`s.
+
+```pycon
+>>> from pypsf import PsfFile
+
+>>> psf = PsfFile.load("/my/path/tran.tran.tran")
+<pypsf.psfbin.PsfBinFile object at 0x7fe371bcc110>
+
+>>> psf.header
+{'PSFversion': '1.1', ..., 'errpreset': 'conservative', 'method': 'gear2only', 'lteratio': 10.0, 'relref': 'alllocal', 'cmin': 0.0, 'gmin': 1e-12, 'rabsshort': 0.0}
+
+>>> psf.names
+['n\\<4\\>', 'n\\<0\\>', 'vdda', 'n\\<3\\>', 'n\\<2\\>', 'n\\<1\\>', 'M0_G', 'V0:p', 'V1:p']
+
+>>> psf.sweep_info
+{'sweep_direction': 0, 'units': 's', 'plot': 0, 'grid': 1, 'name': 'time'}
+
+>>> psf.get_signal("M0_G")
+Waveform(t=array([0.00000000e+00, 2.62865500e-14, 3.86983269e-14, ...,
+       9.99771753e-10, 9.99885876e-10, 1.00000000e-09]), t_unit='s', y=array([0.5, 0.5, 0.5, ..., 0.5, 0.5, 0.5]), y_unit='V', name='M0_G')
+
+```
+
+The `PsfDir` class can be used to open the various analysis results based on the contents of the `logFile` in the PSF directory.
+
+A `psfinfo` command-line utility is provided to list the contents of a PSF directory or data file.
 
 
-## details
+## Details
 
 roughly inspired by https://github.com/henjo/libpsf
-see `example.py`
+
 
 Main dependencies:
 
@@ -30,30 +53,7 @@ The following have been tested:
 ## Next steps
 
 - can add psf.get_type_info() method to return additional data (properties) from e.g. element.info
-- packaging
+- PyPI packaging
 - regression tests:
   - collect PSF files for different analyses, different simulators
   - calculate various statistics (rms values of all signals, etc) for regression
-
-
-## Waveform utils
-
-```python
-x = wfm1 + wfm2  # (combining x points and interpolating before adding)
-wfm.cross(0.2, type='rising')  # -> list[float]
-wfm.clip(start=1e-9, stop=2e-9)
-wfm.real
-wfm.imag
-wfm.abs
-wfm.phase(unwrap=True)
-
-peak_to_peak(wfm)
-delay(wfm1, wfm2, th1, th2, type1, type2)
-moving_average()
-conv(wfm1, wfm2)
-clock_sample(signal, clock, clock_threshold, clock_edge)
-linear_fit(wfm) # weighted or non-weighted
-dnl(wfm)
-inl(wfm)
-derivative(wfm)
-```
