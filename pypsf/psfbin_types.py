@@ -3,8 +3,8 @@ from typing import Any
 
 import numpy as np
 
-from pypsf.memview import MemoryViewAbs
-from pypsf.psfbin_defs import TypeId
+from .memview import MemoryViewAbs
+from .psfbin_defs import TypeId
 
 logger = logging.getLogger(__name__)
 

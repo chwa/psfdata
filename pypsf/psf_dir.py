@@ -2,9 +2,7 @@ import itertools
 import logging
 from pathlib import Path
 
-from pypsf.psfbin import PsfBinFile
-
-from .logfile import PsfAsciiFile, read_asciipsf
+from . import PsfFile
 
 logger = logging.getLogger(__name__)
 
@@ -12,28 +10,26 @@ logger = logging.getLogger(__name__)
 class PsfDir:
     def __init__(self, path: Path) -> None:
         self._path = path.absolute()
-        logfile = self._path / "logFile"
-        if not logfile.is_file():
-            raise FileNotFoundError(f"{logfile}")
-        logger.info(f"Reading {logfile}")
-        self.header, self._result = read_asciipsf(logfile)
+        logfile_path = self._path / "logFile"
+        if not logfile_path.is_file():
+            raise FileNotFoundError(f"{logfile_path}")
+        logger.info(f"Reading {logfile_path}")
+        self._logfile = PsfFile.load(logfile_path)
 
         logger.info("HEADER:")
-        for k, v in self.header.items():
+        for k, v in self._logfile.header.items():
             logger.info(f"    {k:22}: {v}")
 
         logger.info("")
         logger.info("AVAILABLE DATA FILES:")
 
-        for name, item in self._result.items():
+        for name, item in self._logfile._values.items():
             logger.info(f"{name}:")
-            for k, v in itertools.islice(item[1].as_dict().items(), 40):
+            for k, v in itertools.islice(item.items(), 40):
                 logger.info(f"    {k:22}: {v}")
 
-    def get_analysis(self, name: str) -> PsfBinFile | PsfAsciiFile:
-        item = self._result[name]
-        item_dict = item[1].as_dict()
-        type = item_dict["analysisType"]
-        filename = item_dict["dataFile"]
+    def get_analysis(self, name: str) -> PsfFile:
+        item = self._logfile._values[name]
+        filename = item["dataFile"]
 
-        return PsfBinFile(self._path / filename)
+        return PsfFile.load(self._path / filename)

@@ -5,8 +5,6 @@ from io import BufferedReader
 import blosc
 import numpy as np
 
-from pypsf.util import hexprint
-
 """
 PSF-XL compressed binary format
 ===============================
@@ -88,7 +86,7 @@ class FakeBufferedReader:
 
 def read_xl_chunk(f: FakeBufferedReader, offset: int):
     f.seek(offset + 1)
-    hexprint(f._data[f._pos:])
+    # hexprint(f._data[f._pos:])
     desc_str = ""
     while (c := f.read(1)) != b'\0':
         desc_str += c.decode()
@@ -97,7 +95,7 @@ def read_xl_chunk(f: FakeBufferedReader, offset: int):
     m = xl_marker.match(desc_str)
     if m is None:
         raise ValueError(f"Invalid chunk marker: {desc_str}")
-    chunk_props: dict[str, int | None] = {k: (v is not None) and hex2signed(v) for k, v in m.groupdict().items()}
+    chunk_props: dict[str, int | None] = {k: v and hex2signed(v) for k, v in m.groupdict().items()}
     # print(f"    {chunk_props}")
 
     # value start is at next word boundary
@@ -124,8 +122,8 @@ def read_xl_chunk(f: FakeBufferedReader, offset: int):
         else:
             y_bytes = f.read(chunk_props['csize'])
             y_value = np.frombuffer(y_bytes, dtype='float')
-            print(f">>> special y data: {y_value}")
-            print(f">>> for x values: {x_value}")
+            # print(f">>> special y data: {y_value}")
+            # print(f">>> for x values: {x_value}")
     else:
         y_start = value_start
         if chunk_props['type'] in [0x22]:

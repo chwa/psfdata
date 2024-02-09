@@ -1,12 +1,28 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from pypsf.waveform import Waveform
+    from .waveform import Waveform
 
 
 class PsfFile(ABC):
     """Base class for ASCII and binary PSF files (and other file formats?)"""
+
+    @staticmethod
+    def load(path: Path) -> PsfFile:
+        with open(path, 'rb') as f:
+            header_bytes = f.read(6)
+
+        if header_bytes == str.encode('HEADER'):
+            from pypsf.psfascii import PsfAsciiFile
+            return PsfAsciiFile(path)
+        else:
+            from pypsf.psfbin import PsfBinFile
+            return PsfBinFile(path)
+
     @property
     @abstractmethod
     def header(self) -> dict[str, Any]:
@@ -18,9 +34,9 @@ class PsfFile(ABC):
         ...
 
     @property
-    @abstractmethod
+    # @abstractmethod
     def names(self) -> list[str]:
-        ...
+        return list(self._values.keys())
 
     @abstractmethod
     def get_signal(self, name: str) -> Waveform:
@@ -29,3 +45,12 @@ class PsfFile(ABC):
     @abstractmethod
     def get_signals(self, names: list[str]) -> dict[str, Waveform]:
         ...
+
+    def print_info(self) -> None:
+        print("HEADER")
+        for k, v in self.header.items():
+            print(f"    {k+':':<24} {str(v)[:80]}")
+
+        print("VALUES")
+        for n in self.names:
+            print(f"    {n}")

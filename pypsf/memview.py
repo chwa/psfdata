@@ -2,7 +2,7 @@ import string
 import struct
 from typing import Self
 
-from pypsf.util import batched
+from .util import batched
 
 
 class MemoryViewAbs:
@@ -10,7 +10,7 @@ class MemoryViewAbs:
     Needed because PSF uses absolute file positions for block start/end."""
 
     def __init__(self, data: bytes | memoryview, _abspos: int = 0) -> None:
-        self._mv = memoryview(data) if isinstance(data, bytes) else data
+        self._mv = memoryview(data)
         self._abspos = _abspos  # offset of self._mv in the original bytes object
 
     def __getitem__(self, key) -> Self:

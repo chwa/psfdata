@@ -8,10 +8,9 @@ from typing import Any, Generator
 
 import numpy as np
 
-from pypsf.psfbin_types import DataType, read_datatypes, read_properties
-
 from .memview import MemoryViewAbs
 from .psfbin_defs import SectionType
+from .psfbin_types import DataType, read_datatypes, read_properties
 
 logger = logging.getLogger(__name__)
 

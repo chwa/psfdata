@@ -3,13 +3,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from pypsf.psfbin_types import DataType
-from pypsf.psfxl import FakeBufferedReader, read_xl_signal
-from pypsf.waveform import Waveform
-
 from .memview import MemoryViewAbs
+from .psf import PsfFile
 from .psfbin_sections import (HeaderSection, SectionType, SimpleValueSection, SweepSection, SweepValueSection,
                               TraceSection, TypeSection)
+from .psfbin_types import DataType
+from .psfxl import FakeBufferedReader, read_xl_signal
+from .waveform import Waveform
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class SectionInfo:
     size: int
 
 
-class PsfBinFile:
+class PsfBinFile(PsfFile):
     def __init__(self, path: Path) -> None:
         logger.info(f"Loading PSF file: {path}")
         self._header: dict[str, Any] = {}
@@ -48,6 +48,7 @@ class PsfBinFile:
             self._read_toc()
             self.is_psfxl_index = False
         else:
+            logger.info(f"No TOC found, assuming this is a PSFXL index file.")
             self.is_psfxl_index = True
 
         self._read_header()

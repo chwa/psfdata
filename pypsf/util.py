@@ -1,9 +1,5 @@
-from itertools import islice
 import string
-from pathlib import Path
-
-import blosc
-import numpy as np
+from itertools import islice
 
 
 def batched(iterable, n):
