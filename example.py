@@ -1,12 +1,15 @@
 import logging
+import typing
 from pathlib import Path
+from sys import getsizeof
 
 import matplotlib
 from matplotlib import pyplot as plt
 
 from pypsf import PsfDir, PsfFile
+from pypsf.psfbin import PsfBinFile
 
-# matplotlib.use('qtagg')
+matplotlib.use('qtagg')
 
 
 def main() -> None:
@@ -16,7 +19,7 @@ def main() -> None:
     fn = Path("examples/simpledc2.dc")
     fn = Path("examples/abc.tran.tran")
     # fn = Path("examples/mc1_dc.montecarlo")
-    fn = Path("psf_examples/psf_dcsweep_tran/tran.tran.tran")
+    fn = Path("private_examples/psf_dcsweep_tran/tran.tran.tran")
     # fn = Path("examples/simpledc2.dc")
     # fn = Path("psf_examples/psf_afs_tran/tran.tran")
     # fn = Path("psf_examples/psf_spectre_ac/ac.ac")
@@ -25,12 +28,24 @@ def main() -> None:
     # fn = Path("private_examples/psfxl_large/tran.tran.tran")
     # fn = Path("private_examples/dcswp.dc")
     # psf = PsfFile.load("private_examples/psf_dcsweep_tran/tran.tran.tran")
-    fn = Path("private_examples/psf_medusa_dc/allParams.info.allparameters")
-    fn = Path("private_examples/dc.dc")
+    # fn = Path("private_examples/psf_medusa_dc/allParams.info.allparameters")
+    # fn = Path("private_examples/dc.dc")
+    fn = Path("private_examples/psf_4G/tran.tran.tran")
 
-    psf = PsfFile.load(fn)
+    psf = typing.cast(PsfBinFile, PsfFile.load(fn))
     print(f"{psf.names=}")
-    print(f"{psf.signal_info('M1:ids')}")
+    print(len(psf.names))
+
+    wfm_dict = psf.get_signals(psf.names[:8000])
+    for name, wfm in wfm_dict.items():
+        print(name, len(wfm.t), getsizeof(wfm.t), getsizeof(wfm.y))
+    # wfm.plot()
+    input("asdf")
+
+    # plt.show()
+
+    # print(f"{psf.signal_info('M1:ids')}")
+    return
 
     exit()
 

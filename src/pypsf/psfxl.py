@@ -116,7 +116,8 @@ def read_xl_chunk(f: DataBuffer, offset: int):
     f.seek(value_start)
     if chunk_props['type'] == 0xa0:
         if chunk_props['csize'] == 8:
-            y_value, = struct.unpack('d', f.read(8))
+            y_single, = struct.unpack('d', f.read(8))
+            y_value = np.full(x_value.shape, y_single)
         else:
             y_bytes = f.read(chunk_props['csize'])
             y_value = np.frombuffer(y_bytes, dtype='float')
@@ -162,11 +163,9 @@ def read_xl_signal(f: DataBuffer, offset: int):
         xs.append(x)
         ys.append(y)
         i += 1
-        # if i > 1000:
-        # break
-    print(f"read {i} chunks")
     x = np.concatenate(list(reversed(xs)))
-    y = np.concatenate(list(reversed(ys)))
+    lst = list(reversed(ys))
+    y = np.concatenate(lst)
     from pypsf import Waveform
     wfm = Waveform(x, 's', y, 'V')
     return wfm
