@@ -37,7 +37,7 @@ A `psfinfo` command-line utility is provided to list the contents of a PSF direc
 Main dependencies:
 
 - https://github.com/pyparsing/pyparsing for ASCII format parsing
-- https://github.com/Blosc/python-blosc for reading the compressed data chunks in PSF-XL
+- https://github.com/Blosc/python-blosc2 for reading the compressed data chunks in PSF-XL
 - numpy for arrays
 
 

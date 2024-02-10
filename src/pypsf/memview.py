@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import struct
-from typing import Self
 
 from .util import hexprint
 
@@ -12,7 +13,7 @@ class MemoryViewAbs:
         self._mv = memoryview(data)
         self._abspos = _abspos  # offset of self._mv in the original bytes object
 
-    def __getitem__(self, key) -> Self:
+    def __getitem__(self, key) -> MemoryViewAbs:
         if isinstance(key, slice):
             newpos = self._abspos + key.indices(len(self._mv))[0]
             return self.__class__(self._mv[key], newpos)
@@ -22,7 +23,7 @@ class MemoryViewAbs:
     def __len__(self) -> int:
         return len(self._mv)
 
-    def split_at_absolute(self, abs_pos: int) -> tuple[Self, Self]:
+    def split_at_absolute(self, abs_pos: int) -> tuple[MemoryViewAbs, MemoryViewAbs]:
         rel_pos = abs_pos - self._abspos
         assert 0 <= rel_pos <= len(self)
         return (self.__class__(self._mv[:rel_pos], self._abspos),
@@ -40,7 +41,7 @@ class MemoryViewAbs:
         """Read int at position pos (without consuming it)"""
         if pos < 0:
             pos += len(self.data)
-        return int.from_bytes(self._mv[pos: pos + 4])
+        return int.from_bytes(self._mv[pos: pos + 4], byteorder='big')
 
     def _consume(self, n: int) -> None:
         self._mv = self._mv[n:]
@@ -57,14 +58,14 @@ class MemoryViewAbs:
 
     def read_int8(self, peek=False) -> int:
         """Consume 1 byte and return int."""
-        value = int.from_bytes(self._mv[:])
+        value = int.from_bytes(self._mv[:], byteorder='big')
         if not peek:
             self._consume(1)
         return value
 
     def read_int32(self, peek=False) -> int:
         """Consume 4 bytes and return int."""
-        value = int.from_bytes(self._mv[:4])
+        value = int.from_bytes(self._mv[:4], byteorder='big')
         if not peek:
             self._consume(4)
         return value
