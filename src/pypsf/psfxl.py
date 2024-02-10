@@ -2,7 +2,7 @@ import re
 import struct
 from io import BufferedReader
 
-import blosc  # type: ignore
+import blosc2  # type: ignore
 import numpy as np
 
 """
@@ -108,7 +108,7 @@ def read_xl_chunk(f: DataBuffer, offset: int):
     # print(f"X starts at {x_start}")
     f.seek(x_start)
     x_bytes = f.read(chunk_props['xlen'])
-    x_uncomp = blosc.decompress(x_bytes, as_bytearray=True)
+    x_uncomp = blosc2.decompress(x_bytes, as_bytearray=True)
     x_value = np.frombuffer(x_uncomp, dtype='float')
     # print(f"x = {x_value} ({len(x_value)})")
 
@@ -134,7 +134,7 @@ def read_xl_chunk(f: DataBuffer, offset: int):
         else:
             y_bytes = f.read(chunk_props['xlen'])
         try:
-            y_uncomp = blosc.decompress(y_bytes, as_bytearray=True)
+            y_uncomp = blosc2.decompress(y_bytes, as_bytearray=True)
         except:
             print(f"{hex(len(y_bytes))}")
             # l = 8*(len(y_bytes) // 8)

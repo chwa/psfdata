@@ -6,11 +6,11 @@ build-backend = "setuptools.build_meta"
 name = "pypsf"
 version = "0.0.1"
 readme = "README.md"
-requires-python = ">=3.11"
-dependencies = ["numpy", "pyparsing", "blosc"]
+requires-python = ">=3.10"
+dependencies = ["numpy", "pyparsing", "blosc2"]
 
 [project.optional-dependencies]
-dev = ["pytest", "mypy"]
+dev = ["tox", "pytest", "mypy"]
 
 [project.scripts]
 psfinfo = "pypsf.tools.psfinfo:main"
