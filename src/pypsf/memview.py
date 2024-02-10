@@ -85,6 +85,9 @@ class MemoryViewAbs:
         length = self.read_int32()
         string = bytes(self._mv[:length]).decode()
 
+        if len(string) != length:
+            raise ValueError("String length does not match.")
+
         pad = ((4 - length) & 3)  # align to 4-byte boundary
         self._consume(length + pad)
 

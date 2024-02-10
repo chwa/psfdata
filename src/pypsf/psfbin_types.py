@@ -69,7 +69,7 @@ class DataType:
     def __init__(self, data: MemoryViewAbs, typedefs: None | dict[int, Any] = None, with_value: bool = False):
         self.ref: DataType | None = None
         self.typeid: TypeId | None = None
-        self.properties: dict = {}
+        self.properties: dict[str, str | int | float | tuple] = {}
         self.children: list[DataType] = []
         self.value = None
 

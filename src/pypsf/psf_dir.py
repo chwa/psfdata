@@ -1,6 +1,9 @@
 import itertools
 import logging
+import typing
 from pathlib import Path
+
+from pypsf.psfascii import PsfAsciiFile
 
 from . import PsfFile
 
@@ -14,7 +17,7 @@ class PsfDir:
         if not logfile_path.is_file():
             raise FileNotFoundError(f"{logfile_path}")
         logger.info(f"Reading {logfile_path}")
-        self._logfile = PsfFile.load(logfile_path)
+        self._logfile = typing.cast(PsfAsciiFile, PsfFile.load(logfile_path))
 
         logger.info("HEADER:")
         for k, v in self._logfile.header.items():

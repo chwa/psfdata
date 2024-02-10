@@ -173,14 +173,14 @@ class PsfAsciiFile(PsfFile):
     def sweep_info(self) -> dict[str, Any] | None:
         ...
 
-    # @property
-    # def names(self) -> list[str]:
-    #     ...
+    @property
+    def names(self) -> list[str]:
+        return list(self._values.keys())
+
+    def signal_info(self, name: str) -> dict[str, Any]:
+        return {}
 
     def get_signal(self, name: str) -> Waveform:
-        ...
-
-    def get_signals(self, names: list[str]) -> dict[str, Waveform]:
         ...
 
 

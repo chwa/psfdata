@@ -2,7 +2,7 @@ import re
 import struct
 from io import BufferedReader
 
-import blosc
+import blosc  # type: ignore
 import numpy as np
 
 """
@@ -67,7 +67,7 @@ def hex2signed(h: str) -> int:
     return int.from_bytes(bytes.fromhex(h), signed=True)
 
 
-class FakeBufferedReader:
+class DataBuffer:
     def __init__(self, f: BufferedReader):
         self._data = f.read()
         self._pos = 0
@@ -84,28 +84,26 @@ class FakeBufferedReader:
         return d
 
 
-def read_xl_chunk(f: FakeBufferedReader, offset: int):
+def read_xl_chunk(f: DataBuffer, offset: int):
     f.seek(offset + 1)
-    # hexprint(f._data[f._pos:])
     desc_str = ""
     while (c := f.read(1)) != b'\0':
         desc_str += c.decode()
     desc_str = desc_str.rstrip('\n')
-    # print(f"\nCHUNK at {offset}: {desc_str}")
+
     m = xl_marker.match(desc_str)
     if m is None:
         raise ValueError(f"Invalid chunk marker: {desc_str}")
-    chunk_props: dict[str, int | None] = {k: v and hex2signed(v) for k, v in m.groupdict().items()}
-    # print(f"    {chunk_props}")
+    chunk_props: dict[str, int] = {k: hex2signed(v) for k, v in m.groupdict().items() if v is not None}
 
     # value start is at next word boundary
     value_start = 8*((f.tell()+7) // 8)
 
     # READ X VECTOR
-    if chunk_props['xoffset'] is None:
-        x_start = value_start
-    else:
+    if 'xoffset' in chunk_props:
         x_start = offset - chunk_props['xoffset']
+    else:
+        x_start = value_start
 
     # print(f"X starts at {x_start}")
     f.seek(x_start)
@@ -127,12 +125,10 @@ def read_xl_chunk(f: FakeBufferedReader, offset: int):
     else:
         y_start = value_start
         if chunk_props['type'] in [0x22]:
-            assert chunk_props['xlen'] is not None
             y_start += chunk_props['xlen']
         # print(f"Y starts at {y_start}")
         f.seek(y_start)
         if chunk_props['type'] in [0x22, 0xa2]:
-            assert chunk_props['ylen'] is not None
             y_bytes = f.read(chunk_props['ylen'])
         else:
             y_bytes = f.read(chunk_props['xlen'])
@@ -155,7 +151,7 @@ def read_xl_chunk(f: FakeBufferedReader, offset: int):
     return x_value, y_value, nextpos
 
 
-def read_xl_signal(f: BufferedReader, offset: int):
+def read_xl_signal(f: DataBuffer, offset: int):
     nextpos = offset
     xs = []
     ys = []

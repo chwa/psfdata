@@ -8,7 +8,7 @@ from .psf import PsfFile
 from .psfbin_sections import (HeaderSection, SectionType, SimpleValueSection, SweepSection, SweepValueSection,
                               TraceSection, TypeSection)
 from .psfbin_types import DataType
-from .psfxl import FakeBufferedReader, read_xl_signal
+from .psfxl import DataBuffer, read_xl_signal
 from .waveform import Waveform
 
 logger = logging.getLogger(__name__)
@@ -72,9 +72,9 @@ class PsfBinFile(PsfFile):
         return self._header
 
     @property
-    def sweep_info(self) -> dict[str, Any] | None:
-        if not self.is_sweep:
-            return None
+    def sweep_info(self) -> dict[str, Any]:
+        if self._sweep_section is None:
+            return {}
         sweeps = self._sweep_section.sweeps
         assert len(sweeps) == 1
         data_type = next(iter(sweeps.values()))
@@ -92,7 +92,7 @@ class PsfBinFile(PsfFile):
             else:
                 return list(self._trace_section.traces_by_name.keys())
 
-    def signal_info(self, name: str) -> dict[str, Any] | DataType:
+    def signal_info(self, name: str) -> dict[str, Any]:
         if self.is_sweep:
             for t in self._trace_section.flattened():
                 if t.name == name:
@@ -108,16 +108,14 @@ class PsfBinFile(PsfFile):
             else:
                 return self._trace_section.traces_by_name[name]
 
-    def get_signals(self, name: list[str]) -> dict[str, Waveform | dict]:
-        pass
-
     def get_signal(self, name: str) -> Waveform | dict:
         if self.is_psfxl_index:
             fn = Path(self._path.parent / (self._path.name+".psfxl"))
             with open(fn, 'rb') as f:
-                rdr = FakeBufferedReader(f)
+                rdr = DataBuffer(f)
             psfxl_idx = self._trace_section.traces_by_name[name].properties['psfxl_idx']
-            print(psfxl_idx)
+            assert isinstance(psfxl_idx, tuple)
+            assert isinstance(psfxl_idx[1], int)
             wfm = read_xl_signal(rdr, psfxl_idx[1])
             wfm.name = name
             return wfm

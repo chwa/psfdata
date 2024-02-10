@@ -38,16 +38,16 @@ class PsfFile(ABC):
         ...
 
     @property
-    # @abstractmethod
-    def names(self) -> list[str]:
-        return list(self._values.keys())
-
     @abstractmethod
-    def get_signal(self, name: str) -> Waveform:
+    def names(self) -> list[str]:
         ...
 
     @abstractmethod
-    def get_signals(self, names: list[str]) -> dict[str, Waveform]:
+    def signal_info(self, name: str) -> dict[str, Any]:
+        ...
+
+    @abstractmethod
+    def get_signal(self, name: str) -> Waveform | dict:
         ...
 
     def print_info(self) -> None:

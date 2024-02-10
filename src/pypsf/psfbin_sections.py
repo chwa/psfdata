@@ -130,7 +130,7 @@ class TraceSection(Section):
         # read datatypes or groupdefs...
         self.traces = read_datatypes(self._data, typedefs=typedefs)
 
-        self.traces_by_name = {}
+        self.traces_by_name: dict[str, DataType] = {}
         for v in self.traces.values():
             grp_str = f'(Group, n={len(v.children)})'if v.is_group else ''
             logger.info(f"    Element {v.name!r} (0x{v.id:02x}) {grp_str}")
@@ -171,7 +171,7 @@ class SimpleValueSection(Section):
         # read datatypes or groupdefs...
         self.traces = read_datatypes(self._data, typedefs=typedefs, with_value=True)
 
-        self.traces_by_name = {}
+        self.traces_by_name: dict[str, DataType] = {}
         for v in list(self.traces.values()):
             self.traces_by_name[v.name] = v
 

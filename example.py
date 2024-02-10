@@ -20,13 +20,17 @@ def main() -> None:
     # fn = Path("examples/simpledc2.dc")
     # fn = Path("psf_examples/psf_afs_tran/tran.tran")
     # fn = Path("psf_examples/psf_spectre_ac/ac.ac")
-    # fn = Path("examples/frequencySweep")
-    fn = Path("private_examples/psfxl_tran_1signal/tran.tran.tran")
-    fn = Path("private_examples/psfxl_large/tran.tran.tran")
+    # fn = Path("private_examples/frequencySweep")
+    # fn = Path("private_examples/psfxl_tran_1signal/tran.tran.tran")
+    # fn = Path("private_examples/psfxl_large/tran.tran.tran")
     # fn = Path("private_examples/dcswp.dc")
-    psf = PsfFile.load("private_examples/psf_dcsweep_tran/tran.tran.tran")
+    # psf = PsfFile.load("private_examples/psf_dcsweep_tran/tran.tran.tran")
+    fn = Path("private_examples/psf_medusa_dc/allParams.info.allparameters")
+    fn = Path("private_examples/dc.dc")
 
-    print(f"{psf=}")
+    psf = PsfFile.load(fn)
+    print(f"{psf.names=}")
+    print(f"{psf.signal_info('M1:ids')}")
 
     exit()
 
@@ -35,8 +39,6 @@ def main() -> None:
     psf.print_info()
     print()
     exit()
-
-    psf = PsfFile.load(fn)
 
     psf.print_info()
     psf.header
