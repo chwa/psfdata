@@ -11,7 +11,6 @@ import numpy as np
 from pypsf.waveform import Waveform
 
 from .memview import MemoryViewAbs
-from .psfbin_defs import SectionType
 from .psfbin_types import (Group, SignalDef, TypeDef, get_complex_dtype, read_properties, read_signaldef, read_typedef,
                            read_value_entry)
 
@@ -319,16 +318,3 @@ class SweepValueSection(ValueSection):
             trace_values = {n: array[n] for n in trace_names}  # TODO complicated...
 
         return swept_values, trace_values
-
-
-_mapping = {
-    SectionType.HEADER: HeaderSection,
-    SectionType.TYPE: TypeSection,
-    SectionType.SWEEP: SweepSection,
-    SectionType.TRACE: TraceSection,
-    SectionType.VALUE: SweepValueSection,
-}
-
-
-def new_section(type: SectionType, data: MemoryViewAbs) -> Section:
-    return _mapping[type](data)

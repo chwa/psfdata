@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 from pyparsing import (Combine, Dict, Empty, Forward, Group, Literal, MatchFirst, OneOrMore, Opt, ParserElement,
                        ParseResults, QuotedString, SkipTo, Suppress, ZeroOrMore, pyparsing_common)
 
@@ -27,7 +28,7 @@ class PsfAsciiFile(PsfFile):
         super().__init__()
 
         self._custom_types: dict[str, ParserElement] = {}
-        self._values: dict[str, Any] = {}
+        self._values: dict[str, dict | Waveform] = {}
         self._text = path.read_text()
 
         self._read_info()
@@ -89,7 +90,7 @@ class PsfAsciiFile(PsfFile):
                     Opt(trace_section))
         self._info = sections.parse_string(self._text)
 
-        self._header = self._info["header_section"].as_dict()
+        self._header = self._info["header_section"].as_dict()  # type: ignore
 
     def _read_simple_values(self):
         # single value section:
@@ -101,7 +102,7 @@ class PsfAsciiFile(PsfFile):
 
         result = value_section.parse_string(self._text)
         for k, v in result.items():
-            self._values[k] = v.as_dict()
+            self._values[k] = v.as_dict()  # type: ignore
 
     def _read_sweep_values(self):
         # swept value section:
@@ -116,16 +117,17 @@ class PsfAsciiFile(PsfFile):
         sweep_var_type = self._info["sweep_section"][0]
         sweep_point = Group(quoted(sweep_var_type[0]) + self._custom_types[sweep_var_type[1]])
 
-        for k, v in self._info["trace_section"].items():
+        for k, v in self._info["trace_section"].items():  # type: ignore
             sweep_point += Group(quoted(k) + self._custom_types[v])
 
         value_section = Suppress(SkipTo("VALUE", include=True)) + \
             OneOrMore(Dict(sweep_point, asdict=True)) + Suppress("END")
         values = value_section.parse_string(self._text)
 
-        self._values = {}
-        for name in [sweep_var_type[0]] + list(self._info["trace_section"].keys()):
-            self._values[name] = [d[name] for d in values]
+        swp_array = np.array([d[sweep_var_type[0]] for d in values])
+        for name in self._info["trace_section"].keys():  # type: ignore
+            y_array = np.array([d[name] for d in values])
+            self._values[name] = Waveform(swp_array, "x", y_array, "y")
 
     def _add_custom_type(self, typedef: ParseResults) -> None:
         """Add a ParserExpression to custom_types that can parse the type specified by typedef"""
@@ -146,7 +148,7 @@ class PsfAsciiFile(PsfFile):
                 expr = Suppress("(") + Group(ZeroOrMore(pyparsing_common.number)) + Suppress(")")
             case '>struct':
                 expr = Suppress("(")
-                a = Empty()
+                a: ParserElement = Empty()
                 for x in typedef[1][0]:
                     match x[1]:
                         case 'FLOAT' | 'DOUBLE':
@@ -171,7 +173,11 @@ class PsfAsciiFile(PsfFile):
 
     @property
     def sweep_info(self) -> dict[str, Any] | None:
-        ...
+        if "sweep_section" in self._info.keys():
+            # TODO: also get properties
+            return self._info["sweep_section"].as_dict()  # type: ignore
+        else:
+            return None
 
     @property
     def names(self) -> list[str]:
@@ -180,47 +186,5 @@ class PsfAsciiFile(PsfFile):
     def signal_info(self, name: str) -> dict[str, Any]:
         return {}
 
-    def get_signal(self, name: str) -> Waveform:
-        ...
-
-
-if __name__ == "__main__":
-    # f = Path("psf_examples/psf_dcsweep_tran/logFile")
-    # read_logfile_value_section(f)
-
-    fn = Path(sys.argv[1])
-
-    with open(fn, 'rb') as f:
-        print(bytes('HEADER', 'utf8'))
-        print(f.read(6))
-
-    exit()
-
-    psf = PsfAsciiFile(fn)
-    print()
-    print(psf.header)
-    print()
-    for k, v in psf._values.items():
-        print(f"==== {k} ====")
-        print(str(v)[:100])
-    # header, result = read_asciipsf(f)
-    exit()
-
-    for s in ["header", "type", "sweep", "trace", "value"]:
-        if f"{s}_section" in result:
-            print(f"{s.upper()}:")
-            result[f"{s}_section"].pprint()
-
-    # print(custom_types)
-
-    print("HEADER:")
-    for k, v in header.items():
-        print(f"    {k:22}: {v}")
-
-    print("\nVALUES:")
-
-    for name, item in result.items():
-        print(f"{name}:")
-        for k, v in itertools.islice(item[1].as_dict().items(), 40):
-            print(f"    {k:22}: {v}")
-        # print("    ...")
+    def get_signal(self, name: str) -> Waveform | dict:
+        return self._values[name]

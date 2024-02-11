@@ -5,8 +5,9 @@ from typing import Any, Iterable
 
 from .memview import MemoryViewAbs
 from .psf import PsfFile
-from .psfbin_sections import (HeaderSection, SectionType, SimpleValueSection, SweepSection, SweepValueSection,
-                              TraceSection, TypeSection)
+from .psfbin_defs import SectionType
+from .psfbin_sections import (HeaderSection, SimpleValueSection, SweepSection, SweepValueSection, TraceSection,
+                              TypeSection)
 from .psfbin_types import Group, SignalDef
 from .psfxl import DataBuffer, read_xl_signal
 from .waveform import Waveform

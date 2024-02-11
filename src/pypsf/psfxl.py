@@ -64,7 +64,7 @@ xl_marker = re.compile(
 def hex2signed(h: str) -> int:
     assert len(h) <= 16
     h = h.rjust(16, '0')
-    return int.from_bytes(bytes.fromhex(h), signed=True)
+    return int.from_bytes(bytes.fromhex(h), byteorder='big', signed=True)
 
 
 class DataBuffer:

@@ -20,5 +20,5 @@ class Waveform:
         return f"Waveform: {len(self.t)} points, t = {self.t[0]} -> {self.t[-1]} {self.t_unit}"
 
     def plot(self):
-        from matplotlib import pyplot as plt
+        from matplotlib import pyplot as plt  # type: ignore
         plt.plot(self.t, self.y, label=self.name)
