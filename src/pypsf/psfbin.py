@@ -88,22 +88,18 @@ class PsfBinFile(PsfFile):
             return [t.name for t in self._trace_section.flattened()]
         else:
             if isinstance(self._value_section, SimpleValueSection):
-                return [t.name for t in self._value_section.traces.values()]
+                return list(self._value_section.values.keys())
             else:
                 return list(self._trace_section.traces_by_name.keys())
 
-    def signal_info(self, name: str) -> SignalDef | Group:
+    def signal_info(self, name: str) -> SignalDef | Group | None:
         if self._is_sweep:
             return self._trace_section.traces_by_name[name]
         else:
             # TODO:
-            return {}
-            # if isinstance(self._value_section, SimpleValueSection):
-            #     return self._value_section.traces_by_name[name].ref
-            # else:
-            #     return self._trace_section.traces_by_name[name]
+            return None
 
-    def get_signal(self, name: str) -> Waveform | dict:
+    def get_signal(self, name: str) -> Waveform | int | float | dict:
         if self.is_psfxl_index:
             fn = Path(self._path.parent / (self._path.name+".psfxl"))
             with open(fn, 'rb') as f:
@@ -121,7 +117,7 @@ class PsfBinFile(PsfFile):
             wfm = Waveform(self._swept_values, xunits, self._trace_values[name], yunits, name)
             return wfm
         else:
-            return self._value_section.traces_by_name[name].value
+            return self._value_section.get_signal(name)
 
     def get_signals(self, names: Iterable[str]) -> dict[str, Waveform]:
         if self.is_psfxl_index:

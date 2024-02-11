@@ -47,7 +47,7 @@ class PsfFile(ABC):
         ...
 
     @abstractmethod
-    def get_signal(self, name: str) -> Waveform | dict:
+    def get_signal(self, name: str) -> Waveform | dict | int | float:
         ...
 
     def print_info(self) -> None:
