@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 import logging
-from abc import ABC
+from abc import ABC, abstractmethod
 from collections import defaultdict
 from itertools import islice
 from typing import Any, Generator
 
 import numpy as np
 
+from pypsf.waveform import Waveform
+
 from .memview import MemoryViewAbs
 from .psfbin_defs import SectionType
-from .psfbin_types import DataType, read_datatypes, read_properties
+from .psfbin_types import (Group, SignalDef, TypeDef, get_complex_dtype, read_properties, read_signaldef, read_typedef,
+                           read_value_entry)
 
 logger = logging.getLogger(__name__)
 
@@ -66,18 +69,32 @@ class TypeSection(Section):
         assert section_type == 22
 
         indexpos = self._data.read_int32()  # start of the section index
+        typedata, indexdata = self._data.split_at_absolute(indexpos)
 
-        self._data, indexdata = self._data.split_at_absolute(indexpos)
+        self.typedefs: dict[int, TypeDef] = {}
+        self.read_typedefs(typedata)
 
-        self.dtypes = read_datatypes(self._data)
-        for v in self.dtypes.values():
+        for v in self.typedefs.values():
             logger.info(f"    {v}")
-            for c in v.children[:10]:
-                logger.info(f"        {c}")
-            if len(v.children) > 10:
-                logger.info(f"        ...")
+            if v.struct_members is not None:
+                for c in v.struct_members[:10]:
+                    logger.info(f"        {c}")
+                if len(v.struct_members) > 10:
+                    logger.info(f"        ...")
 
         self.index = Index(indexdata)
+
+    def read_typedefs(self, data: MemoryViewAbs) -> None:
+        while len(data):
+            next = data.read_int32(peek=True)
+            match next:
+                case 0x03:
+                    return  # TODO... does this mean anything?
+                case 0x10 | 0x11:
+                    element = read_typedef(data)
+                    self.typedefs[element.id] = element
+                case _:
+                    raise ValueError(f"Unknown DataType starting with: {next=}")
 
 
 class SweepSection(Section):
@@ -87,9 +104,10 @@ class SweepSection(Section):
         # # discard anything past endpos (TBC):
         # self._data = self._data[:self._data.abspos + endpos]
 
-        self.sweeps = read_datatypes(self._data, typedefs=typedefs)
-        for v in self.sweeps.values():
-            logger.info(f"    {v}")
+        self.sweep_def: SignalDef = read_signaldef(self._data, typedefs)
+        # TODO: check if more than one sweep ?
+
+        logger.info(f"    {self.sweep_def}")
 
 
 class TraceIndex:
@@ -117,48 +135,72 @@ class TraceIndex:
 class TraceSection(Section):
     """identical to TypeSection, except datatypes are references and index is a TraceIndex..."""
 
-    def __init__(self, data: MemoryViewAbs, typedefs: dict[int, Any]) -> None:
+    def __init__(self, data: MemoryViewAbs, typedefs: dict[int, TypeDef]) -> None:
         super().__init__(data)
 
         section_type = self._data.read_int32()
         assert section_type == 22
 
         indexpos = self._data.read_int32()  # start of the section index
+        tracedata, indexdata = self._data.split_at_absolute(indexpos)
 
-        self._data, indexdata = self._data.split_at_absolute(indexpos)
+        self.traces: dict[int, SignalDef | Group] = {}
+        self.traces_by_name: dict[str, SignalDef] = {}
+        while len(tracedata):
+            next = tracedata.read_int32(peek=True)
+            match next:
+                case 0x03:
+                    break  # TODO... does this mean anything?
+                case 0x10 | 0x11:
+                    signaldef = read_signaldef(tracedata, typedefs=typedefs)
+                    self.traces[signaldef.id] = signaldef
 
-        # read datatypes or groupdefs...
-        self.traces = read_datatypes(self._data, typedefs=typedefs)
-
-        self.traces_by_name: dict[str, DataType] = {}
-        for v in self.traces.values():
-            grp_str = f'(Group, n={len(v.children)})'if v.is_group else ''
-            logger.info(f"    Element {v.name!r} (0x{v.id:02x}) {grp_str}")
-            if v.is_group:
-                sub_dict = {}
-                for i, c in enumerate(v.children):
-                    sub_dict[c.name] = c
-                    # just flatten it for now...
-                    self.traces_by_name[c.name] = c
-                    if i < 10:
-                        logger.info(f"    - {c}")
-                if len(v.children) > 10:
-                    logger.info(f"    - ...")
-            else:
-                self.traces_by_name[v.name] = v
+                    # TODO: do we really want to flatten groups
+                    if isinstance(signaldef, Group):
+                        for c in signaldef.children:
+                            self.traces_by_name[c.name] = c
+                    else:
+                        self.traces_by_name[signaldef.name] = signaldef
+                case _:
+                    raise ValueError(f"Unknown DataType starting with: {next=}")
 
         self.index = TraceIndex(indexdata)
 
-    def flattened(self) -> Generator[DataType, None, None]:
+        for k, v in self.traces_by_name.items():
+            logger.info(f"    {str(v)[:100]}")
+            if isinstance(v, Group):
+                for c in v.children:
+                    logger.info(f"        {str(c)[:96]}")
+
+    def flattened(self) -> Generator[SignalDef, None, None]:
         for dt in self.traces.values():
-            if dt.is_group:
+            if isinstance(dt, Group):
                 yield from dt.children
             else:
                 yield dt
 
 
-class SimpleValueSection(Section):
-    def __init__(self, data: MemoryViewAbs, typedefs: dict[int, Any]) -> None:
+class ValueSection(Section):
+    def __init__(self, data: MemoryViewAbs) -> None:
+        super().__init__(data)
+
+        self._names: list[str] = []
+
+    @property
+    def sweep_info(self) -> dict[str, Any] | None:
+        return None
+
+    @property
+    def names(self) -> list[str]:
+        return self._names
+
+    @abstractmethod
+    def get_signal(self, name: str) -> Waveform | dict:
+        raise NotImplementedError()
+
+
+class SimpleValueSection(ValueSection):
+    def __init__(self, data: MemoryViewAbs, typedefs: dict[int, TypeDef]) -> None:
         super().__init__(data)
 
         section_type = self._data.read_int32()
@@ -166,25 +208,31 @@ class SimpleValueSection(Section):
 
         indexpos = self._data.read_int32()  # start of the section index
 
-        self._data, indexdata = self._data.split_at_absolute(indexpos)
+        valuedata, indexdata = self._data.split_at_absolute(indexpos)
 
-        # read datatypes or groupdefs...
-        self.traces = read_datatypes(self._data, typedefs=typedefs, with_value=True)
+        self.values: dict[str, int | float | dict] = {}
 
-        self.traces_by_name: dict[str, DataType] = {}
-        for v in list(self.traces.values()):
-            self.traces_by_name[v.name] = v
+        while len(valuedata):
+            next = valuedata.read_int32(peek=True)
+            match next:
+                case 0x03:
+                    break  # TODO... does this mean anything?
+                case 0x10 | 0x11:
+                    id, name, value, properties = read_value_entry(valuedata, typedefs)
+                    self.values[name] = value
+                case _:
+                    raise ValueError(f"Unknown DataType starting with: {next=}")
 
-        for k, v in islice(self.traces_by_name.items(), 10):
-            logger.info(f"    {k} = {str(v.value)[:60]}")
-
-        if len(self.traces_by_name) > 10:
+        for k, v in islice(self.values.items(), 10):
+            logger.info(f"    {k} = {str(v)[:60]}")
+        if len(self.values) > 10:
             logger.info(f"    ...")
 
-        # self.index = TraceIndex(indexdata) TODO...
+    def get_signal(self, name: str) -> int | float | dict:
+        return self.values[name]
 
 
-class SweepValueSection(Section):
+class SweepValueSection(ValueSection):
     def __init__(self, data: MemoryViewAbs, sweep_section: SweepSection, trace_section: TraceSection,
                  is_windowed=False, windowsize=4096) -> None:
         super().__init__(data)
@@ -199,7 +247,6 @@ class SweepValueSection(Section):
         self.is_windowed = is_windowed
         self.windowsize = windowsize
 
-        self.dtype_dict: dict[str, list] = {"names": [], "formats": [], "offsets": []}
         self.dt_pos = 0
 
         if self.is_windowed:
@@ -213,29 +260,19 @@ class SweepValueSection(Section):
             self._data = self._data[zeropad_size:]
         else:
             logger.info("Non-windowed format, creating dtype dictionary")
-            self._create_dtype_dict()
+            self.complex_dtype = get_complex_dtype(self.dt_pos, sweep_section.sweep_def, trace_section.traces)
 
-    def _add_single_dtype(self, dt: DataType, is_sweep: bool = False):
-        dtype_dict, next_offset = dt.get_dtype_dict(self.dt_pos)
-
-        for name, lst in self.dtype_dict.items():
-            lst.extend(dtype_dict[name])
-
-        self.dt_pos = next_offset
-
-    def _create_dtype_dict(self):
-        dt_sweep = next(iter(self._sweep_section.sweeps.values()))
-        self._add_single_dtype(dt_sweep, is_sweep=True)
-
-        for c in self._trace_section.traces.values():
-            self._add_single_dtype(c)
+    def get_signal(self, name: str) -> Waveform:
+        if self._sweep_signal is None or self._signals is None:
+            self._sweep_signal, self._signals = self.get_data(npoints=99999999)  # TODO
+        return Waveform(self._sweep_signal, "x", self._signals[name], "y")  # TODO
 
     def get_data(self, npoints: int):
         # this is for sweep data only
         swept_values = np.zeros(npoints)
         trace_values = {}
         for trace in self._trace_section.flattened():
-            assert isinstance(trace, DataType)
+            assert isinstance(trace, SignalDef)
             trace_values[trace.name] = np.zeros(npoints)
 
         if self.is_windowed:
@@ -252,7 +289,7 @@ class SweepValueSection(Section):
                 npoints_win = d >> 16  # for example 511 for windowsize=4096 and double type
                 npoints_valid = d & 0xFFFF  # i supect that is what the 2nd int16 means...
 
-                dtype = next(iter(self._sweep_section.sweeps.values())).dtype
+                dtype = self._sweep_section.sweep_def.dtype
                 dtype = dtype.newbyteorder('>')  # big endian
 
                 data = np.frombuffer(self._data._mv, count=npoints_valid, dtype=dtype)
@@ -272,14 +309,14 @@ class SweepValueSection(Section):
 
                 points_read += npoints_win
         else:
-            dtype = np.dtype(self.dtype_dict)  # type: ignore
+            dtype = self.complex_dtype
             array = np.frombuffer(
                 self._data.data, count=len(self._data) // dtype.itemsize, dtype=dtype)
 
-            swept_name = self.dtype_dict["names"][0]
-            trace_names = self.dtype_dict["names"][1:]
+            swept_name = self._sweep_section.sweep_def.name
+            trace_names = list(self._trace_section.traces_by_name.keys())
             swept_values = array[swept_name]
-            trace_values = {n: array[n] for n in trace_names}
+            trace_values = {n: array[n] for n in trace_names}  # TODO complicated...
 
         return swept_values, trace_values
 

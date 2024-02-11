@@ -7,7 +7,7 @@ from .memview import MemoryViewAbs
 from .psf import PsfFile
 from .psfbin_sections import (HeaderSection, SectionType, SimpleValueSection, SweepSection, SweepValueSection,
                               TraceSection, TypeSection)
-from .psfbin_types import DataType
+from .psfbin_types import Group, SignalDef
 from .psfxl import DataBuffer, read_xl_signal
 from .waveform import Waveform
 
@@ -24,9 +24,13 @@ class SectionInfo:
 class PsfBinFile(PsfFile):
     def __init__(self, path: Path) -> None:
         logger.info(f"Loading PSF file: {path}")
-        self._header: dict[str, Any] = {}
-        self.is_sweep: bool = False
-        self._value_section = None
+
+        self._header: dict[str, str | int | float | tuple] = {}
+        self._sweep_info: dict[str, Any] | None = None
+        self._signal_info: dict[str, dict] = {}
+
+        self._is_sweep: bool = False
+        self._value_section: SimpleValueSection | SweepValueSection | None = None
 
         self._path = path
 
@@ -63,7 +67,7 @@ class PsfBinFile(PsfFile):
             s = f"{cl}:{self._path.name}: PSF-XL index file"
         else:
             s = f"{cl}:{self._path.name}: {len(self.names)} signals"
-        if self.is_sweep:
+        if self._is_sweep:
             s += f" (sweep: {self._npoints} points)"
         return s
 
@@ -72,15 +76,10 @@ class PsfBinFile(PsfFile):
         return self._header
 
     @property
-    def sweep_info(self) -> dict[str, Any]:
+    def sweep_info(self) -> SignalDef | None:
         if self._sweep_section is None:
-            return {}
-        sweeps = self._sweep_section.sweeps
-        assert len(sweeps) == 1
-        data_type = next(iter(sweeps.values()))
-        info = data_type.properties.copy()
-        info['name'] = data_type.name
-        return info
+            return None
+        return self._sweep_section.sweep_def
 
     @property
     def names(self) -> list[str]:
@@ -92,21 +91,16 @@ class PsfBinFile(PsfFile):
             else:
                 return list(self._trace_section.traces_by_name.keys())
 
-    def signal_info(self, name: str) -> dict[str, Any]:
-        if self.is_sweep:
-            for t in self._trace_section.flattened():
-                if t.name == name:
-                    if t.ref is None:
-                        return {}
-                    info = t.ref.properties.copy()
-                    info['NAME'] = t.ref.name
-                    return info
-            raise ValueError(f"{name} not Found")
+    def signal_info(self, name: str) -> SignalDef | Group:
+        if self._is_sweep:
+            return self._trace_section.traces_by_name[name]
         else:
-            if isinstance(self._value_section, SimpleValueSection):
-                return self._value_section.traces_by_name[name].ref
-            else:
-                return self._trace_section.traces_by_name[name]
+            # TODO:
+            return {}
+            # if isinstance(self._value_section, SimpleValueSection):
+            #     return self._value_section.traces_by_name[name].ref
+            # else:
+            #     return self._trace_section.traces_by_name[name]
 
     def get_signal(self, name: str) -> Waveform | dict:
         if self.is_psfxl_index:
@@ -119,10 +113,10 @@ class PsfBinFile(PsfFile):
             wfm = read_xl_signal(rdr, psfxl_idx[1])
             wfm.name = name
             return wfm
-        elif self.is_sweep:
-            xunits = self.sweep_info.get('units', '-')
+        elif self.sweep_info is not None:
+            xunits = self.sweep_info.properties.get('units', '-')
             info = self.signal_info(name)
-            yunits = info.get('units', '-')
+            yunits = info.properties.get('units', '-')
             wfm = Waveform(self._swept_values, xunits, self._trace_values[name], yunits, name)
             return wfm
         else:
@@ -182,7 +176,7 @@ class PsfBinFile(PsfFile):
             header_section = HeaderSection(self._data[s.offset:s.offset+s.size])
         self._rest = header_section._tail
         self._header = header_section.props
-        self.is_sweep = self._header["PSF sweeps"] != 0
+        self._is_sweep = self._header["PSF sweeps"] != 0
         self._npoints = self._header["PSF sweep points"]
         self._is_windowed = "PSF window size" in self._header
 
@@ -198,25 +192,25 @@ class PsfBinFile(PsfFile):
         self._rest = self._type_section._tail
 
         self._sweep_section = None
-        if self.is_sweep:
+        if self._is_sweep:
             if self.is_psfxl_index:
-                self._sweep_section = SweepSection(self._rest, self._type_section.dtypes)
+                self._sweep_section = SweepSection(self._rest, self._type_section.typedefs)
             else:
                 s = self._toc[SectionType.SWEEP]
-                self._sweep_section = SweepSection(self._data[s.offset:s.offset+s.size], self._type_section.dtypes)
+                self._sweep_section = SweepSection(self._data[s.offset:s.offset+s.size], self._type_section.typedefs)
             self._rest = self._sweep_section._tail
 
         if self.is_psfxl_index:
-            self._trace_section = TraceSection(self._rest, self._type_section.dtypes)
+            self._trace_section = TraceSection(self._rest, self._type_section.typedefs)
         elif SectionType.TRACE in self._toc:
             s = self._toc[SectionType.TRACE]
-            self._trace_section = TraceSection(self._data[s.offset:s.offset+s.size], self._type_section.dtypes)
+            self._trace_section = TraceSection(self._data[s.offset:s.offset+s.size], self._type_section.typedefs)
 
     def _read_traces(self) -> None:
         """Read ValueSection"""
         s = self._toc[SectionType.VALUE]
         data = self._data[s.offset:s.offset+s.size]
-        if self.is_sweep:
+        if self._is_sweep:
             assert self._sweep_section is not None
             self._value_section = SweepValueSection(data, self._sweep_section, self._trace_section,
                                                     is_windowed=self._is_windowed)
@@ -226,4 +220,4 @@ class PsfBinFile(PsfFile):
 
             self._swept_values, self._trace_values = self._value_section.get_data(self._npoints)
         else:
-            self._value_section = SimpleValueSection(data, self._type_section.dtypes)
+            self._value_section = SimpleValueSection(data, self._type_section.typedefs)

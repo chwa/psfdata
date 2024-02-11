@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import logging
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -57,160 +60,164 @@ def read_properties(data: MemoryViewAbs) -> dict[str, str | int | float | tuple]
     return d
 
 
-class DataType:
-    """
-    Used as:
-      - datatype/unit definition in TypeSection
-      - sweep variable in SweepSection
-      - trace/signal definition in TraceSection
-      - single-valued signal (can be struct) in SimpleValueSection
-    """
+@dataclass
+class TypeBase:
+    id: int
+    name: str
+    properties: dict[str, str | int | float | tuple]
 
-    def __init__(self, data: MemoryViewAbs, typedefs: None | dict[int, Any] = None, with_value: bool = False):
-        self.ref: DataType | None = None
-        self.typeid: TypeId | None = None
-        self.properties: dict[str, str | int | float | tuple] = {}
-        self.children: list[DataType] = []
-        self.value = None
 
-        if typedefs is None:
-            typedefs = {}
+@dataclass
+class TypeDef(TypeBase):
+    typeid: TypeId
+    struct_members: list[TypeDef] | None
 
-        kind = data.read_int32()
-        assert kind in [0x10, 0x11]
-        self.is_group = kind == 0x11
 
-        self.id = data.read_int32()
-        self.name = data.read_string()
-
-        if self.is_group:
-            nchildren = data.read_int32()
-            for _ in range(nchildren):
-                c = DataType(data, typedefs=typedefs)
-                self.children.append(c)
-        else:
-            if reference := data.read_int32():
-                self.ref = typedefs[reference]
-                if with_value:
-                    self.value = self._read_data(data)
-            else:
-                self.typeid = TypeId(data.read_int32())
-                if self.typeid == TypeId.STRUCT:
-                    while data.read_int32(peek=True) != 0x12:
-                        c = DataType(data, typedefs)
-                        self.children.append(c)
-
-                    assert data.read_int32() == 0x12  # struct end marker
-
-        self.properties = read_properties(data)
-
-    def __str__(self) -> str:
-        s = f"Element {self.name!r} (0x{self.id:02x}):"
-        if self.is_group:
-            s += " Group:"
-            for c in self.children:
-                s += f"\n    - {c}"
-        else:
-            if self.ref is not None:
-                s += f" [Reference to {self.ref.name!r} (0x{self.ref.id:02x})]"
-            else:
-                s += f" {self.number_type.name}"
-            if self.value is not None:
-                s += f" = {self.value}"
-            if self.properties:
-                s += f" {str(self.properties)[:44]}"
-        return s
-
-    def _read_data(self, data: MemoryViewAbs):
-        dt = self
-        while dt.ref is not None:
-            dt = dt.ref
-
-        match dt.typeid:
-            case TypeId.INT8:
-                return data.read_int32()  # TODO: =this is wrong
-            case TypeId.INT32:
-                return data.read_int32()
-            case TypeId.DOUBLE:
-                return data.read_double()
-            case TypeId.COMPLEXDOUBLE:
-                return data.read_cdouble()
-            case TypeId.STRUCT:
-                return {c.name: c._read_data(data) for c in dt.children}
-            case _:
-                raise ValueError(f"{dt.number_type}")
-
-    @property
-    def number_type(self) -> TypeId:
-        if self.ref is not None:
-            return self.ref.number_type
-        assert self.typeid is not None
-        return self.typeid
+@dataclass
+class SignalDef(TypeBase):
+    typedef: TypeDef
 
     @property
     def dtype(self) -> np.dtype:
-        """Return the numpy dtype (for simple types)."""
+        """Return the numpy dtype"""
 
-        if self.number_type == TypeId.STRUCT:
-            raise NotImplementedError("Trying to get dtype for struct in SweepSection/ValueSection.")
+        if self.typedef.typeid == TypeId.STRUCT:
+            raise NotImplementedError("Trying to get dtype for struct")
 
         type = {
             TypeId.INT8: np.int8,  # not sure about this one
             TypeId.INT32: np.int32,
             TypeId.DOUBLE: np.float64,
             TypeId.COMPLEXDOUBLE: np.complex128
-        }[self.number_type]
+        }[self.typedef.typeid]
 
         return np.dtype(type)
 
-    def get_dtype_dict(self, offset: int) -> tuple[dict[str, Any], int]:
-        """Return dict containing name/format/offset to be used in the np.dtype constructor."""
 
-        if self.is_group:
-            items = self.children
-        else:
-            items = [self]
+@dataclass
+class Group(TypeBase):
+    children: list[SignalDef]
+
+
+def read_id(data: MemoryViewAbs):
+    kind = data.read_int32()
+    assert kind in [0x10, 0x11]
+    is_group = kind == 0x11
+
+    id = data.read_int32()
+    name = data.read_string()
+
+    return id, name, is_group
+
+
+def read_typedef(data: MemoryViewAbs) -> TypeDef:
+    """Parse a datatype from the Type section"""
+    id, name, is_group = read_id(data)
+    assert not is_group
+
+    ref = data.read_int32()
+    assert ref == 0
+
+    struct = None
+    typeid = TypeId(data.read_int32())
+    if typeid == TypeId.STRUCT:
+        struct = []
+        while data.read_int32(peek=True) != 0x12:
+            c = read_typedef(data)
+            struct.append(c)
+
+        assert data.read_int32() == 0x12  # struct end marker
+    properties = read_properties(data)
+
+    return TypeDef(id, name, properties, typeid, struct)
+
+
+def read_signaldef(data: MemoryViewAbs, typedefs: dict[int, TypeDef]) -> SignalDef | Group:
+    """Parse an entry from the Trace or Sweep section"""
+    id, name, is_group = read_id(data)
+
+    if is_group:
+        nchildren = data.read_int32()
+        children = []
+        for _ in range(nchildren):
+            c = read_signaldef(data, typedefs)
+            children.append(c)
+
+        properties = read_properties(data)
+        return Group(id, name, properties, children)
+    else:
+        reference = data.read_int32()
+        assert reference != 0
+
+        properties = read_properties(data)
+        return SignalDef(id, name, properties, typedefs[reference])
+
+
+def read_value(data: MemoryViewAbs, datatype: TypeDef):
+    match datatype.typeid:
+        case TypeId.INT8:
+            return data.read_int32()  # TODO: =this is wrong
+        case TypeId.INT32:
+            return data.read_int32()
+        case TypeId.DOUBLE:
+            return data.read_double()
+        case TypeId.COMPLEXDOUBLE:
+            return data.read_cdouble()
+        case TypeId.STRUCT:
+            assert datatype.struct_members is not None
+            return {c.name: read_value(data, c) for c in datatype.struct_members}
+        case _:
+            raise ValueError
+
+
+def read_value_entry(data: MemoryViewAbs, typedefs: dict[int, TypeDef]):
+    """Parse an entry from the (simple) Value section"""
+    id, name, is_group = read_id(data)
+
+    assert not is_group
+
+    reference = data.read_int32()
+    assert reference != 0
+
+    # sdef = signaldefs[reference]
+    # value = read_value(data, sdef.datatype)
+    value = read_value(data, typedefs[reference])
+
+    properties = read_properties(data)
+
+    return id, name, value, properties
+
+
+def get_complex_dtype(start_offset: int, sweep_def: SignalDef, traces: dict[int, SignalDef | Group]) -> np.dtype:
+    """Returns the format/offset to be used in the np.dtype constructor (and the next start offset)"""
+
+    offset = start_offset
+    dtype_dict: dict[str, list] = {"names": [], "formats": [], "offsets": []}
+
+    for item in [sweep_def] + list(traces.values()):
 
         offset += 8  # always skip the 2 int32s for 0x10 <id>
 
-        dtype_dict: dict[str, Any] = {
-            "names": [],
-            "formats": [],
-            "offsets": [],
-        }
+        if isinstance(item, Group):
+            lst = item.children
+        else:
+            lst = [item]
 
-        for item in items:
-            if item.number_type == TypeId.STRUCT:
-                raise NotImplementedError("Trying to get dtype for struct in SweepSection/ValueSection.")
+        for signal in lst:
+            if signal.typedef.typeid == TypeId.STRUCT:
+                raise NotImplementedError("Trying to get dtype for struct in ValueSection.")
 
             format, size = {
                 TypeId.INT8: (">i1", 1),  # not sure about this one
                 TypeId.INT32: (">i4", 4),
                 TypeId.DOUBLE: (">f8", 8),
                 TypeId.COMPLEXDOUBLE: (">c16", 16)
-            }[item.number_type]
+            }[signal.typedef.typeid]
 
-            dtype_dict["names"].append(item.name)
+            dtype_dict["names"].append(signal.name)
             dtype_dict["formats"].append(format)
             dtype_dict["offsets"].append(offset)
 
-            offset = offset + size
+            offset += size
 
-        return dtype_dict, offset
-
-
-def read_datatypes(data: MemoryViewAbs, typedefs: None | dict[int, DataType] = None, with_value: bool = False) -> dict[int, DataType]:
-    """Read zero or more datatypes/groupdefs and return them in a dict."""
-    d: dict[int, DataType] = {}
-    while len(data):
-        next = data.read_int32(peek=True)
-        match next:
-            case 0x03:
-                return d  # TODO... does this mean anything?
-            case 0x10 | 0x11:
-                element = DataType(data, typedefs=typedefs, with_value=with_value)
-            case _:
-                raise ValueError(f"Unknown DataType starting with: {next=}")
-        d[element.id] = element
-
-    return d
+    return np.dtype(dtype_dict)  # type: ignore
