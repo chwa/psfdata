@@ -3,7 +3,7 @@ import logging
 import typing
 from pathlib import Path
 
-from pypsf.psfascii import PsfAsciiFile
+from psfdata.psfascii import PsfAsciiFile
 
 from . import PsfFile
 

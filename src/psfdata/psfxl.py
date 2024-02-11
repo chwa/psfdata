@@ -166,6 +166,6 @@ def read_xl_signal(f: DataBuffer, offset: int):
     x = np.concatenate(list(reversed(xs)))
     lst = list(reversed(ys))
     y = np.concatenate(lst)
-    from pypsf import Waveform
+    from psfdata import Waveform
     wfm = Waveform(x, 's', y, 'V')
     return wfm

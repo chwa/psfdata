@@ -5,7 +5,7 @@ from pathlib import Path
 import matplotlib
 from matplotlib import pyplot as plt
 
-from pypsf import PsfFile
+from psfdata import PsfFile
 
 matplotlib.use('qtagg')
 

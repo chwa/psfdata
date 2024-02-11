@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pypsf"
+name = "psfdata"
 version = "0.0.1"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -30,4 +30,4 @@ classifiers = [
 dev = ["tox", "pytest", "mypy"]
 
 [project.scripts]
-psfinfo = "pypsf.tools.psfinfo:main"
+psfinfo = "psfdata.tools.psfinfo:main"

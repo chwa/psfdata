@@ -8,10 +8,10 @@ Loads PSF-ASCII and PSF-bin files (including experimental support for PSF-XL).
 Data is returned as dict/list and waveforms in a lightweight `Waveform` dataclass containing the x and y components as `numpy.ndarray`s.
 
 ```pycon
->>> from pypsf import PsfFile
+>>> from psfdata import PsfFile
 
 >>> psf = PsfFile.load("/my/path/tran.tran.tran")
-<pypsf.psfbin.PsfBinFile object at 0x7fe371bcc110>
+<psfdata.psfbin.PsfBinFile object at 0x7fe371bcc110>
 
 >>> psf.header
 {'PSFversion': '1.1', ..., 'errpreset': 'conservative', 'method': 'gear2only',

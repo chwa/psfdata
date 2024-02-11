@@ -8,7 +8,7 @@ from typing import Any, Generator
 
 import numpy as np
 
-from pypsf.waveform import Waveform
+from psfdata.waveform import Waveform
 
 from .memview import MemoryViewAbs
 from .psfbin_types import (Group, SignalDef, TypeDef, get_complex_dtype, read_properties, read_signaldef, read_typedef,

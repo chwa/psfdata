@@ -1,6 +1,6 @@
 import pytest
 
-from pypsf.memview import MemoryViewAbs
+from psfdata.memview import MemoryViewAbs
 
 LENGTH = 2000
 

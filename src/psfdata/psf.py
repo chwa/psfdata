@@ -21,10 +21,10 @@ class PsfFile(ABC):
             header_bytes = f.read(6)
 
         if header_bytes == str.encode('HEADER'):
-            from pypsf.psfascii import PsfAsciiFile
+            from psfdata.psfascii import PsfAsciiFile
             return PsfAsciiFile(path)
         else:
-            from pypsf.psfbin import PsfBinFile
+            from psfdata.psfbin import PsfBinFile
             return PsfBinFile(path)
 
     @property
