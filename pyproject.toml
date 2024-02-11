@@ -9,6 +9,23 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = ["numpy", "pyparsing", "blosc2"]
 
+classifiers = [
+    "Development Status :: 3 - Alpha",
+
+    # Indicate who your project is intended for
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Other Audience",
+    "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
+
+    # Specify the Python versions you support here.
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+
 [project.optional-dependencies]
 dev = ["tox", "pytest", "mypy"]
 
