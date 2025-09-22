@@ -117,8 +117,8 @@ class PsfBinFile(PsfFile):
                 rdr = DataBuffer(f)
             psfxl_idx = self._trace_section.traces_by_name[name].properties['psfxl_idx']
             assert isinstance(psfxl_idx, tuple)
-            assert isinstance(psfxl_idx[1], int)
-            wfm = read_xl_signal(rdr, psfxl_idx[1])
+            assert isinstance(psfxl_idx[0], int)
+            wfm = read_xl_signal(rdr, psfxl_idx[0])
             wfm.name = name
             return wfm
         elif self.sweep_info is not None:
@@ -140,8 +140,8 @@ class PsfBinFile(PsfFile):
             for name in names:
                 psfxl_idx = self._trace_section.traces_by_name[name].properties['psfxl_idx']
                 assert isinstance(psfxl_idx, tuple)
-                assert isinstance(psfxl_idx[1], int)
-                wfm = read_xl_signal(rdr, psfxl_idx[1])
+                assert isinstance(psfxl_idx[0], int)
+                wfm = read_xl_signal(rdr, psfxl_idx[0])
                 wfm.name = name
                 result[name] = wfm
 

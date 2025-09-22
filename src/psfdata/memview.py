@@ -70,6 +70,13 @@ class MemoryViewAbs:
             self._consume(4)
         return value
 
+    def read_int64(self, peek=False) -> int:
+        """Consume 8 bytes and return int."""
+        value = int.from_bytes(self._mv[:8], byteorder='big')
+        if not peek:
+            self._consume(8)
+        return value
+
     def read_double(self, peek=False) -> float:
         """Consume 8 bytes and return float."""
         value = struct.unpack(">d", self._mv[:8])[0]

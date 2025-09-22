@@ -44,8 +44,7 @@ def read_properties(data: MemoryViewAbs) -> dict[str, str | int | float | tuple]
                 value = data.read_double()
             case 0x24:
                 value = (
-                    data.read_int32(),
-                    data.read_int32(),
+                    data.read_int64(),
                     data.read_int32(),
                     data.read_int32(),
                     data.read_double(),
