@@ -27,7 +27,7 @@ classifiers = [
 
 
 [project.optional-dependencies]
-dev = ["tox", "pytest", "mypy"]
+dev = ["tox", "pytest", "mypy", "pdoc3"]
 
 [project.scripts]
 psfinfo = "psfdata.tools.psfinfo:main"
