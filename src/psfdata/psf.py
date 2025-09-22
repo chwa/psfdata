@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from .psfbin_types import SignalDef
+
 if TYPE_CHECKING:
     from .waveform import Waveform
 
@@ -34,7 +36,7 @@ class PsfFile(ABC):
 
     @property
     @abstractmethod
-    def sweep_info(self) -> dict[str, Any] | None:
+    def sweep_info(self) -> dict[str, Any] | SignalDef | None:
         ...
 
     @property
@@ -58,3 +60,4 @@ class PsfFile(ABC):
         print("VALUES")
         for n in self.names:
             print(f"    {n}")
+

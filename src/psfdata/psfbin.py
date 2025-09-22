@@ -14,6 +14,12 @@ from .waveform import Waveform
 
 logger = logging.getLogger(__name__)
 
+VALID_SIGNATURES = [
+    0x200,   # monte carlo sweep/index?
+    0x300,
+    0x400,  # normal PSF
+    0x500,  # element.info?
+]
 
 @dataclass
 class SectionInfo:
@@ -23,15 +29,26 @@ class SectionInfo:
 
 
 class PsfBinFile(PsfFile):
+    _path: Path
+    _is_sweep: bool
+    _is_psfxl_index: bool
+    _data: MemoryViewAbs
+
+    _toc: dict[SectionType, SectionInfo]
+    _header: dict[str, str | int | float | tuple]
+    _sweep_info: dict[str, Any] | None
+    _signal_info: dict[str, dict]
+    _value_section: SimpleValueSection | SweepValueSection | None
+
     def __init__(self, path: Path) -> None:
         logger.info(f"Loading PSF file: {path}")
 
-        self._header: dict[str, str | int | float | tuple] = {}
-        self._sweep_info: dict[str, Any] | None = None
-        self._signal_info: dict[str, dict] = {}
+        self._header = {}
+        self._sweep_info = None
+        self._signal_info = {}
 
-        self._is_sweep: bool = False
-        self._value_section: SimpleValueSection | SweepValueSection | None = None
+        self._is_sweep = False
+        self._value_section = None
 
         self._path = path
 
@@ -39,16 +56,10 @@ class PsfBinFile(PsfFile):
             self._data = MemoryViewAbs(f.read())
         logger.info(f"Size is {len(self._data)} bytes.")
 
-        valid_signatures = [
-            0x200,   # monte carlo sweep/index?
-            0x300,
-            0x400,  # normal PSF
-            0x500,  # element.info?
-        ]
         signature = self._data.read_int32(peek=True)
-        assert signature in valid_signatures
+        assert signature in VALID_SIGNATURES
 
-        self._toc: dict[SectionType, SectionInfo] = {}
+        self._toc = {}
         if self._validate(self._data.data):
             self._read_toc()
             self.is_psfxl_index = False

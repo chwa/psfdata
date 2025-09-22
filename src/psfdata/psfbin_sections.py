@@ -134,6 +134,9 @@ class TraceIndex:
 class TraceSection(Section):
     """identical to TypeSection, except datatypes are references and index is a TraceIndex..."""
 
+    traces: dict[int, SignalDef | Group]
+    traces_by_name: dict[str, SignalDef]
+
     def __init__(self, data: MemoryViewAbs, typedefs: dict[int, TypeDef]) -> None:
         super().__init__(data)
 
@@ -143,8 +146,8 @@ class TraceSection(Section):
         indexpos = self._data.read_int32()  # start of the section index
         tracedata, indexdata = self._data.split_at_absolute(indexpos)
 
-        self.traces: dict[int, SignalDef | Group] = {}
-        self.traces_by_name: dict[str, SignalDef] = {}
+        self.traces = {}
+        self.traces_by_name = {}
         while len(tracedata):
             next = tracedata.read_int32(peek=True)
             match next:

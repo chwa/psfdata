@@ -5,7 +5,7 @@ from pathlib import Path
 from psfdata import PsfDir
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO, format="[%(levelname)-7s] [%(name)-18s %(lineno)4d] %(message)s")
+    logging.basicConfig(level=logging.INFO, format="[%(levelname)-7s] [%(name)-24s %(lineno)4d] %(message)s")
 
     psf_dir = PsfDir(Path(sys.argv[1]))
 

@@ -27,12 +27,14 @@ class PsfDir:
         logger.info("AVAILABLE DATA FILES:")
 
         for name, item in self._logfile._values.items():
+            assert isinstance(item, dict)
             logger.info(f"{name}:")
             for k, v in itertools.islice(item.items(), 40):
                 logger.info(f"    {k:22}: {v}")
 
     def get_analysis(self, name: str) -> PsfFile:
         item = self._logfile._values[name]
+        assert isinstance(item, dict)
         filename = item["dataFile"]
 
         return PsfFile.load(self._path / filename)
