@@ -29,7 +29,7 @@ jobs:
 
       - uses: actions/upload-pages-artifact@v4
         with:
-          path: ./htmldocs
+          path: ./htmldocs/psfdata
 
   # Deploy the artifact to GitHub pages.
   # This is a separate job so that only actions/deploy-pages has the necessary permissions.
