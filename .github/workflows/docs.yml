@@ -23,7 +23,7 @@ jobs:
           python-version: '3.13'
 
       # install all dependencies (including pdoc)
-      - run: pip install -e .
+      - run: pip install -e .[dev]
       # build your documentation into htmldocs/.
       - run: pdoc --html -o ./htmldocs psfdata
 
